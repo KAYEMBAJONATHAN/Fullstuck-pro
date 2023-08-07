@@ -1,14 +1,39 @@
-const { User } = require('../models/user')
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const User = require('../models/user');
 
-router.get('/', async (req, res) => {
-    const useerList =  await User.find();
+// User registration
+router.post('/register', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = new User({ username, password: hashedPassword });
+    await user.save();
+    res.json({ message: 'User registered successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
-    if(!useerList) {
-        res.status(500).json({success: false})
+// User login
+router.post('/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const user = await User.findOne({ username });
+    if (!user) {
+      return res.status(401).json({ error: 'Authentication failed' });
     }
-        res.send(useerList);
-})
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
+      return res.status(401).json({ error: 'Authentication failed' });
+    }
+    const token = jwt.sign({ userId: user._id }, 'secretKey');
+    res.json({ token });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
-module.exports =router;
+module.exports = router;
