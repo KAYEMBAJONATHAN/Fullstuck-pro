@@ -1,50 +1,96 @@
 const express = require('express');
 const router = express.Router();
 const Product = require('../models/product');
+const Cart = require('../models/cart');
+const mongoose = require('mongoose');
 
 // Get all products
 router.get('/', async (req, res) => {
-  try {
-    const products = await Product.find();
-    res.json(products);
-  } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+  const productList = await Product.find().populate('cart');
+
+  if (!productList) {
+    return res.status(500).json({ success: false });
   }
+  res.send(productList);
 });
 
 // Create a new product
 router.post('/', async (req, res) => {
-  try {
-    const { name, price, description } = req.body;
-    const product = new Product({ name, price, description });
-    await product.save();
-    res.json({ message: 'Product created successfully' });
-  } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+  const cart = await Cart.findById(req.body.cart);
+  if (!cart) return res.status(400).send('Invalid cart');
+
+  let product = new Product({
+    name: req.body.name,
+    description: req.body.description,
+    richDescription: req.body.richDescription,
+    image: req.body.image,
+    brand: req.body.brand,
+    price: req.body.price,
+    cart: req.body.cart,
+    countInStock: req.body.countInStock,
+    rating: req.body.rating,
+    numReviews: req.body.numReviews,
+    isFeatured: req.body.isFeatured,
+  });
+
+  product = await product.save();
+  if (!product) {
+    return res.status(500).send('Product cannot be created');
   }
+  res.send(product);
 });
 
 // Update a product
 router.put('/:id', async (req, res) => {
-  try {
-    const productId = req.params.id;
-    const { name, price, description } = req.body;
-    await Product.findByIdAndUpdate(productId, { name, price, description });
-    res.json({ message: 'Product updated successfully' });
-  } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    return res.status(400).send('Invalid product ID');
   }
+
+  const cart = await Cart.findById(req.body.cart);
+  if (!cart) return res.status(400).send('Invalid cart');
+
+  const product = await Product.findByIdAndUpdate(
+    req.params.id,
+    {
+      name: req.body.name,
+      description: req.body.description,
+      richDescription: req.body.richDescription,
+      image: req.body.image,
+      brand: req.body.brand,
+      price: req.body.price,
+      cart: req.body.cart,
+      countInStock: req.body.countInStock,
+      rating: req.body.rating,
+      numReviews: req.body.numReviews,
+      isFeatured: req.body.isFeatured,
+    },
+    { new: true } // To return the updated product
+  );
+
+  if (!product) {
+    return res.status(404).send('Product not found');
+  }
+
+  res.send(product);
 });
 
 // Delete a product
 router.delete('/:id', async (req, res) => {
-  try {
-    const productId = req.params.id;
-    await Product.findByIdAndDelete(productId);
-    res.json({ message: 'Product deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
-  }
+  Product.findByIdAndRemove(req.params.id)
+    .then(product => {
+      if (product) {
+        return res
+          .status(200)
+          .json({ success: true, message: 'The product was deleted' });
+      } else {
+        return res
+          .status(404)
+          .json({ success: false, message: 'Product not found' });
+      }
+    })
+    .catch(err => {
+      return res.status(500).json({ success: false, error: err });
+    });
 });
 
 module.exports = router;
