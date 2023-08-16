@@ -4,16 +4,19 @@ const bodyParser = require('body-parser');
 const morgan = require('morgan');
 const mongoose = require('mongoose');
 const app = express();
+//const authJwt = require('./helpers/jwt');
+const ErrorHandler = require('./helpers/error-handle');
 
 require('dotenv/config');
 
-//middleware
+app.use(cors());
+app.options('*',cors());
 
 app.use(bodyParser.json());
 app.use(morgan('tiny'));
+//app.use(authJwt);
+app.use(ErrorHandler)
 
-//routers
-app.use(cors());
 const productsRouter = require('./routers/products');
 const cartsRoute = require('./routers/carts');
 const ordersRoute = require('./routers/orders');

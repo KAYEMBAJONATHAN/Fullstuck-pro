@@ -14,6 +14,15 @@ router.get('/', async (req, res) => {
   res.send(productList);
 });
 
+router.get('/:id', async (req, res) => {
+  const productList = await Product.find().populate('cart');
+
+  if (!productList) {
+    return res.status(500).json({ success: false });
+  }
+  res.send(productList);
+});
+
 // Create a new product
 router.post('/', async (req, res) => {
   const cart = await Cart.findById(req.body.cart);
@@ -91,6 +100,38 @@ router.delete('/:id', async (req, res) => {
     .catch(err => {
       return res.status(500).json({ success: false, error: err });
     });
+});
+
+router.get('/get/count', async (req, res) => {
+  try {
+    const productCount = await Product.countDocuments();
+
+    res.send({
+      productCount: productCount,
+    });
+  } catch (error) {
+    console.error('Error counting products:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/get/featured', async (req, res) => {
+    const products = await Product.find({isFeatured: true});
+
+    if(products) {
+      res.status(500).json({success: false})
+    }
+     res.send(products);
+});
+
+router.get('/get/featured/:count', async (req, res) => {
+  const count = req.params.count ? req.params.count : 0
+  const products = await Product.find({isFeatured: true}).limit(+count);
+
+  if(products) {
+    res.status(500).json({success: false})
+  }
+   res.send(products);
 });
 
 module.exports = router;
